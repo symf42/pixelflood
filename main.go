@@ -17,7 +17,17 @@ const (
 	port     int    = 8080
 )
 
+var (
+	cache *Cache = nil
+)
+
 func main() {
+
+	cache = &Cache{}
+	err := cache.init()
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	gin.SetMode(gin.ReleaseMode)
 

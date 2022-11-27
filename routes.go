@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -37,27 +36,11 @@ func routePrivateHome(c *gin.Context) {
 }
 
 func routePrivateMovies(c *gin.Context) {
-
-	movies, err := getAllMovies(connectionPool)
-	if err != nil {
-		fmt.Println(err.Error())
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
-	c.JSON(http.StatusOK, movies)
-
+	// TODO: do not access cache properties directly
+	c.JSON(http.StatusOK, cache.Movies)
 }
 
 func routePrivateSeries(c *gin.Context) {
-
-	movies, err := getAllSeries(connectionPool)
-	if err != nil {
-		fmt.Println(err.Error())
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
-	c.JSON(http.StatusOK, movies)
-
+	// TODO: do not access cache properties directly
+	c.JSON(http.StatusOK, cache.Series)
 }

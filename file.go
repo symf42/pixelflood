@@ -6,17 +6,17 @@ import (
 )
 
 type File struct {
-	Id         int           `json:"-"`
-	FormatId   sql.NullInt64 `json:"-"`
-	LanguageId sql.NullInt64 `json:"-"`
-	MovieId    sql.NullInt64 `json:"-"`
-	EpisodeId  sql.NullInt64 `json:"-"`
-	Hash       string        `json:"hash"`
-	CreatedAt  sql.NullTime  `json:"-"`
-	UpdatedAt  sql.NullTime  `json:"-"`
-	DeletedAt  sql.NullTime  `json:"-"`
-	Format     Format        `json:"format"`
-	Language   Language      `json:"language"`
+	Id         int            `json:"-"`
+	FormatId   sql.NullInt64  `json:"-"`
+	LanguageId sql.NullInt64  `json:"-"`
+	MovieId    sql.NullInt64  `json:"-"`
+	EpisodeId  sql.NullInt64  `json:"-"`
+	Hash       sql.NullString `json:"hash"`
+	CreatedAt  sql.NullTime   `json:"-"`
+	UpdatedAt  sql.NullTime   `json:"-"`
+	DeletedAt  sql.NullTime   `json:"-"`
+	Format     Format         `json:"format"`
+	Language   Language       `json:"language"`
 }
 
 func getFilesForMovieId(movieId int, conn *sql.DB) ([]File, error) {
