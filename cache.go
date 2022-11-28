@@ -5,14 +5,21 @@ import (
 )
 
 type Cache struct {
+	Users  map[string]User
 	Movies map[int]Movie
 	Series map[int]Series
 }
 
 func (c *Cache) init() error {
 
-	c.Movies = make(map[int]Movie, 0)
-	c.Series = make(map[int]Series, 0)
+	c.Users = make(map[string]User)
+	c.Movies = make(map[int]Movie)
+	c.Series = make(map[int]Series)
+
+	ub, err := getAllUsers(connectionPool)
+	if err != nil {
+		return fmt.Errorf("cache.go: init(): error loading users from database: %s", err.Error())
+	}
 
 	mb, err := getAllMoviesBulk(connectionPool)
 	if err != nil {
@@ -24,10 +31,61 @@ func (c *Cache) init() error {
 		return fmt.Errorf("cache.go: init(): error loading series from database: %s", err.Error())
 	}
 
+	c.parseUsersBulk(ub)
 	c.parseMoviesBulk(mb)
 	c.parseSeriesBulk(sb)
 
 	return nil
+}
+
+func (c *Cache) parseUsersBulk(u []UserBulk) {
+
+	permissions := make(map[int]Permission, 0)
+	groups := make(map[int]Group, 0)
+
+	// permissions
+	for _, ub := range u {
+		if _, found := permissions[ub.Permission.Id]; !found {
+			permission := Permission{
+				Id:   ub.Permission.Id,
+				Name: ub.Permission.Name,
+			}
+			permissions[ub.Permission.Id] = permission
+		}
+	}
+
+	// groups
+	for _, ub := range u {
+		if _, found := groups[ub.Group.Id]; !found {
+			group := Group{
+				Id:          ub.Group.Id,
+				Name:        ub.Group.Name,
+				Permissions: make(map[string]Permission),
+			}
+			groups[ub.Group.Id] = group
+		}
+		groups[ub.Group.Id].Permissions[ub.Permission.Name] = permissions[ub.Permission.Id]
+	}
+
+	// users
+	for _, ub := range u {
+		if _, found := c.Users[ub.User.Email]; !found {
+			user := User{
+				Id:             ub.User.Id,
+				Firstname:      ub.User.Firstname,
+				Lastname:       ub.User.Lastname,
+				Email:          ub.User.Email,
+				HashedPassword: ub.User.HashedPassword,
+				ActivatedAt:    ub.User.ActivatedAt,
+				CreatedAt:      ub.User.CreatedAt,
+				UpdatedAt:      ub.User.UpdatedAt,
+				DeletedAt:      ub.User.DeletedAt,
+				Groups:         make(map[string]Group),
+			}
+			c.Users[ub.User.Email] = user
+		}
+		c.Users[ub.User.Email].Groups[ub.Group.Name] = groups[ub.Group.Id]
+	}
 }
 
 func (c *Cache) parseMoviesBulk(m []MovieBulk) {

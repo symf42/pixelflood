@@ -17,8 +17,6 @@ type AuthorizationHeader struct {
 func AuthorizationMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		conn := connectionPool
-
 		authorizationHeader := AuthorizationHeader{}
 
 		err := c.ShouldBindHeader(&authorizationHeader)
@@ -42,29 +40,32 @@ func AuthorizationMiddleware() gin.HandlerFunc {
 
 		basicAuthParts := strings.Split(string(basicAuthString), ":")
 
-		stmt, err := conn.Prepare("SELECT `id`, `password` FROM `user` WHERE `email` = ? AND `activated_at` IS NOT NULL;")
-		if err != nil {
-			fmt.Println(err)
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
+		username := basicAuthParts[0]
+		password := basicAuthParts[1]
 
-		var userId int
-		var passwd string
-		err = stmt.QueryRow(basicAuthParts[0]).Scan(&userId, &passwd)
-		if err != nil {
-			fmt.Println(err)
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		if err := bcrypt.CompareHashAndPassword([]byte(passwd), []byte(basicAuthParts[1])); err != nil {
-			fmt.Println(err)
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
+		if user, found := cache.Users[username]; found {
+			// check if basic auth string is already cached for user
+			if user.basicAuth != "" && user.basicAuth == authorizationHeader.Basic {
+				c.Set("userId", user.Id)
+				c.Next()
+				return
+			}
+			// check if credentials are invalid
+			if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password)); err != nil {
+				fmt.Println(err)
+				c.AbortWithStatus(http.StatusUnauthorized)
+				return
+			} else {
+				// credentials are valid, save basic auth string in cache to speed up auth
+				user.basicAuth = authorizationHeader.Basic
+				cache.Users[username] = user
+				c.Set("userId", user.Id)
+				c.Next()
+				return
+			}
 		} else {
-			c.Set("userId", userId)
-			c.Next()
+			// credentials are invalid
+			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
